@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { insforge } from '@/lib/insforge';
+import { supabase } from '@/lib/supabase';
 import { MenuItem, CartItem } from '@/lib/types';
 import {
     Search,
@@ -34,9 +34,9 @@ function MenuContent() {
     }, []);
 
     async function fetchMenu() {
-        const { data } = await insforge.database
+        const { data } = await supabase
             .from('menu')
-            .select()
+            .select('*')
             .eq('available', true)
             .order('category', { ascending: true });
         if (data) setMenu(data as MenuItem[]);
@@ -100,7 +100,7 @@ function MenuContent() {
     async function placeOrder() {
         if (cart.length === 0) return;
 
-        const { data: orderData, error } = await insforge.database
+        const { data: orderData, error } = await supabase
             .from('orders')
             .insert({
                 table_number: tableNumber,
@@ -126,7 +126,7 @@ function MenuContent() {
             price: c.price,
         }));
 
-        await insforge.database.from('order_items').insert(items);
+        await supabase.from('order_items').insert(items);
 
         // Webhook
         try {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { insforge } from '@/lib/insforge';
+import { supabase } from '@/lib/supabase';
 import { Order, OrderItem, Payment } from '@/lib/types';
 import {
     ArrowLeft,
@@ -41,7 +41,7 @@ export default function BillingPage() {
     }, [filter]);
 
     async function fetchOrders() {
-        let query = insforge.database
+        let query = supabase
             .from('orders')
             .select('*, order_items(*)')
             .order('created_at', { ascending: false })
@@ -59,9 +59,9 @@ export default function BillingPage() {
             // Fetch payments for each order
             const orderIds = ordersData.map((o) => o.id);
             if (orderIds.length > 0) {
-                const { data: payments } = await insforge.database
+                const { data: payments } = await supabase
                     .from('payments')
-                    .select()
+                    .select('*')
                     .in('order_id', orderIds);
                 if (payments) {
                     const paymentMap: Record<number, Payment[]> = {};
@@ -88,13 +88,13 @@ export default function BillingPage() {
     });
 
     async function processPayment(orderId: number, method: 'cash' | 'upi' | 'card', amount: number) {
-        await insforge.database.from('payments').insert({
+        await supabase.from('payments').insert({
             order_id: orderId,
             method,
             amount,
         });
 
-        await insforge.database
+        await supabase
             .from('orders')
             .update({ status: 'CLOSED' })
             .eq('id', orderId);
@@ -102,15 +102,15 @@ export default function BillingPage() {
         setShowPaymentModal(false);
         fetchOrders();
         if (selectedOrder?.id === orderId) {
-            const { data } = await insforge.database
+            const { data } = await supabase
                 .from('orders')
                 .select('*, order_items(*)')
                 .eq('id', orderId)
                 .single();
             if (data) {
-                const { data: payments } = await insforge.database
+                const { data: payments } = await supabase
                     .from('payments')
-                    .select()
+                    .select('*')
                     .eq('order_id', orderId);
                 (data as OrderWithDetails).payments = (payments || []) as Payment[];
                 setSelectedOrder(data as OrderWithDetails);

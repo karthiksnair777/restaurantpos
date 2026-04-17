@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { insforge } from '@/lib/insforge';
+import { supabase } from '@/lib/supabase';
 import { TableInfo } from '@/lib/types';
 import {
     ArrowLeft,
@@ -28,9 +28,9 @@ export default function TablesPage() {
     }, []);
 
     async function fetchTables() {
-        const { data } = await insforge.database
+        const { data } = await supabase
             .from('tables')
-            .select()
+            .select('*')
             .order('table_number', { ascending: true });
         if (data) setTables(data as TableInfo[]);
         setLoading(false);
@@ -39,7 +39,7 @@ export default function TablesPage() {
     async function addTable() {
         const num = parseInt(newTableNumber);
         if (!num) return;
-        await insforge.database.from('tables').insert({
+        await supabase.from('tables').insert({
             table_number: num,
             qr_code: `/menu?table=${num}`,
         });
@@ -50,7 +50,7 @@ export default function TablesPage() {
 
     async function deleteTable(id: number) {
         if (!confirm('Delete this table?')) return;
-        await insforge.database.from('tables').delete().eq('id', id);
+        await supabase.from('tables').delete().eq('id', id);
         fetchTables();
     }
 

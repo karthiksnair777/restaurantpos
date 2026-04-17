@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { insforge } from '@/lib/insforge';
+import { supabase } from '@/lib/supabase';
 import { Order, OrderItem, OrderStatus } from '@/lib/types';
 import {
     ChefHat,
@@ -12,7 +12,6 @@ import {
     Timer,
     UtensilsCrossed,
     RefreshCcw,
-    Volume2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -32,7 +31,7 @@ export default function KitchenPage() {
     const [filter, setFilter] = useState<'active' | 'all'>('active');
 
     const fetchOrders = useCallback(async () => {
-        let query = insforge.database
+        let query = supabase
             .from('orders')
             .select('*, order_items(*)')
             .order('created_at', { ascending: false });
@@ -49,48 +48,35 @@ export default function KitchenPage() {
     useEffect(() => {
         fetchOrders();
 
-        // Setup realtime
-        let connected = false;
-        async function setupRealtime() {
-            try {
-                await insforge.realtime.connect();
-                await insforge.realtime.subscribe('orders');
-                connected = true;
-
-                insforge.realtime.on('new_order', () => {
+        // Setup Supabase Realtime
+        const channel = supabase
+            .channel('orders-kitchen')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'orders' },
+                () => {
                     fetchOrders();
-                    // Play notification sound
+                    // Play notification sound on new orders
                     try {
                         const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbsGczIjqN0teleUMvVa3c5NCiZjZJm+Dt5beIUTpKlNfn4L+YZklMmdjj2rONZUtSn9ft3bmTb01Rkt/s4cSjfF1Ymdnl3LuYdlRWm9Pg1ayCZ1BTntbo2r2cfWJim9Xp3cSohG9co9bu4sqwjXpjpNXl2sKoi3Vhpdfp4tu+mIVrYKja6OHDqI55ZmWp2eTXuJJ6ZGSm2OXdxKiIcmJjp9no3sCkhnRqaavb6eLErI18bmus2ubi');
                         audio.volume = 0.3;
                         audio.play().catch(() => { });
                     } catch (e) { }
-                });
-
-                insforge.realtime.on('order_updated', () => {
-                    fetchOrders();
-                });
-            } catch (e) {
-                console.log('Realtime not available, using polling');
-            }
-        }
-
-        setupRealtime();
+                }
+            )
+            .subscribe();
 
         // Polling as fallback
         const interval = setInterval(fetchOrders, 5000);
 
         return () => {
             clearInterval(interval);
-            if (connected) {
-                insforge.realtime.unsubscribe('orders');
-                insforge.realtime.disconnect();
-            }
+            supabase.removeChannel(channel);
         };
     }, [fetchOrders]);
 
     async function updateStatus(orderId: number, newStatus: OrderStatus) {
-        await insforge.database
+        await supabase
             .from('orders')
             .update({ status: newStatus })
             .eq('id', orderId);

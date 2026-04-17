@@ -116,7 +116,7 @@ export default function HomePage() {
 
         {/* Footer */}
         <div className="mt-16 text-center text-sm text-[var(--text-muted)]">
-          <p>Powered by InsForge • Real-time sync across all stations</p>
+          <p>Powered by Supabase • Real-time sync across all stations</p>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { insforge } from '@/lib/insforge';
+import { supabase } from '@/lib/supabase';
 import { MenuItem, CartItem, OrderStatus } from '@/lib/types';
 import {
     Search,
@@ -38,9 +38,9 @@ export default function POSPage() {
     }, []);
 
     async function fetchMenu() {
-        const { data, error } = await insforge.database
+        const { data } = await supabase
             .from('menu')
-            .select()
+            .select('*')
             .eq('available', true)
             .order('category', { ascending: true });
         if (data) setMenu(data as MenuItem[]);
@@ -98,7 +98,7 @@ export default function POSPage() {
         if (cart.length === 0) return;
 
         // Create order
-        const { data: orderData, error: orderError } = await insforge.database
+        const { data: orderData, error: orderError } = await supabase
             .from('orders')
             .insert({
                 table_number: selectedTable,
@@ -125,10 +125,10 @@ export default function POSPage() {
             price: c.price,
         }));
 
-        await insforge.database.from('order_items').insert(items);
+        await supabase.from('order_items').insert(items);
 
         // Record payment
-        await insforge.database.from('payments').insert({
+        await supabase.from('payments').insert({
             order_id: order.id,
             method: paymentMethod,
             amount: cartTotal,

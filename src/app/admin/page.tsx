@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { insforge } from '@/lib/insforge';
+import { supabase } from '@/lib/supabase';
 import { MenuItem, Order, OrderItem, Payment } from '@/lib/types';
 import {
     ArrowLeft,
@@ -46,9 +46,9 @@ export default function AdminPage() {
     async function fetchAll() {
         setLoading(true);
         const [ordersRes, paymentsRes, menuRes] = await Promise.all([
-            insforge.database.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }).limit(200),
-            insforge.database.from('payments').select().order('time', { ascending: false }).limit(200),
-            insforge.database.from('menu').select().order('category', { ascending: true }),
+            supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }).limit(200),
+            supabase.from('payments').select('*').order('time', { ascending: false }).limit(200),
+            supabase.from('menu').select('*').order('category', { ascending: true }),
         ]);
         if (ordersRes.data) setOrders(ordersRes.data as (Order & { order_items?: OrderItem[] })[]);
         if (paymentsRes.data) setPayments(paymentsRes.data as Payment[]);
@@ -104,9 +104,9 @@ export default function AdminPage() {
         };
 
         if (editingItem) {
-            await insforge.database.from('menu').update(data).eq('id', editingItem.id);
+            await supabase.from('menu').update(data).eq('id', editingItem.id);
         } else {
-            await insforge.database.from('menu').insert(data);
+            await supabase.from('menu').insert(data);
         }
 
         setShowMenuForm(false);
@@ -116,13 +116,13 @@ export default function AdminPage() {
     }
 
     async function toggleAvailability(item: MenuItem) {
-        await insforge.database.from('menu').update({ available: !item.available }).eq('id', item.id);
+        await supabase.from('menu').update({ available: !item.available }).eq('id', item.id);
         fetchAll();
     }
 
     async function deleteMenuItem(id: number) {
         if (!confirm('Delete this menu item?')) return;
-        await insforge.database.from('menu').delete().eq('id', id);
+        await supabase.from('menu').delete().eq('id', id);
         fetchAll();
     }
 
